@@ -1,0 +1,23 @@
+[package]
+name = "plaur-ingestion"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+plaur-common = { path = "../plaur-common" }
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+uuid = { workspace = true }
+chrono = { workspace = true }
+anyhow = { workspace = true }
+axum = { workspace = true }
+tower = { workspace = true }
+tower-http = { workspace = true }
+reqwest = { workspace = true }
+sqlx = { workspace = true }
+aws-sdk-s3 = { workspace = true }
+tracing = { workspace = true }
+hmac = "0.12"
+sha2 = "0.10"
+hex = "0.4"

@@ -1,0 +1,18 @@
+[workspace]
+resolver = "2"
+
+[package]
+name = "plaur"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "plaur"
+path = "src/main.rs"
+
+[dependencies]
+tokio = { version = "1.0", features = ["full"] }
+anyhow = "1.0"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+base64 = "0.21"

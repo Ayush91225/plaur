@@ -1,0 +1,624 @@
+# Plaur — Full Project Note
+
+**Project name:** Plaur
+
+**Prepared by:** Product, Engineering & Strategy Team
+
+**Date:** (generated)
+
+---
+
+# Executive Summary
+
+Plaur is a production-grade, AI-first Commerce & Marketing Intelligence Operating System that connects deeply to a merchant’s Shopify store, ad platforms, and public social signals to provide continuous, actionable intelligence. Plaur not only reports — it reasons. It explains *why* numbers change, predicts what will happen, recommends prioritized actions, and provides a conversational interface that acts like a human analyst with access to your entire business.
+
+This document is a comprehensive project note covering product objectives, full feature set (detailed), system design, data architecture, AI/ML strategy, security & compliance, infra & devops, rollout strategy, team and resourcing, roadmaps, QA, monitoring, cost drivers, go-to-market and appendices (API scopes, example prompts, weekly report template, and release checklist).
+
+---
+
+# Vision & Goals
+
+**Vision:** Make every merchant feel like they have a senior commerce analyst, CRO expert, and marketing strategist built into their store — accessible via chat.
+
+**Business Goals:**
+
+* Drive measurable revenue uplift for customers via prioritized, data-backed actions
+* Become an indispensable subscription product across Shopify merchants (SMB → Enterprise)
+* Generate high LTV customers via actionable intelligence and automation
+
+**Product Principles:**
+
+* Data-first, but human-friendly: Every recommendation must be traceable to data and explainable
+* Privacy-first integrations and least-privilege access
+* Operational safety: no automatic ad/price changes without merchant approval
+* Modular: enable/disable data sources and modules per customer
+
+---
+
+# Target Users & Use Cases
+
+**Primary Users:** Store owners, growth/product managers, performance marketers, merchandisers, operations managers, agencies.
+
+**Key Use Cases:**
+
+* Daily/weekly business check-ins (“What happened this week?”)
+* Immediate triage of anomalies (sales spike/drop)
+* Marketing optimization (ads, creatives, audiences)
+* Product & catalog strategy (which SKUs to promote, markdowns)
+* Trend-led merchandising (surfacing social trends mapped to products)
+* Inventory risk mitigation (prevent stockouts/overstock)
+* CRO improvements (product page, checkout flows)
+
+---
+
+# High-Level Feature Catalogue (Production-Grade — Deep Explanations)
+
+> The feature catalogue below is exhaustive and written from the vantage of a product manager and system architect. Each feature includes purpose, inputs, outputs, associated data sources, and acceptance criteria.
+
+## 1. Global Platform Capabilities
+
+### 1.1 Multi-tenant SaaS Platform
+
+* **Purpose:** Serve thousands of Shopify merchants with logical isolation and per-tenant data separation.
+* **Inputs:** OAuth tokens, store data, ad platform tokens, trend signals.
+* **Outputs:** Tenant-scoped dashboards, recommendations, alerts.
+* **Acceptance:** Each tenant’s data accessible only with correct credentials; role-based access work correctly.
+
+### 1.2 Role-Based Access & Teams
+
+* **Purpose:** Support teams & agency workflows with roles (Owner, Admin, Analyst, Read-only, Integrator).
+* **Inputs:** User accounts, invitations, SSO (optional).
+* **Outputs:** Permissioned UI/controls; action audit logs.
+* **Acceptance:** Permission enforcement for sensitive actions and data.
+
+### 1.3 Audit Logging & Activity Timeline
+
+* **Purpose:** Record analyst actions, AI suggestions presented, merchant approvals and changes.
+* **Inputs:** System events, user actions, AI recommendations.
+* **Outputs:** Tamper-evident logs, exportable timeline.
+* **Acceptance:** Logs available via UI and API for 90 days by default.
+
+---
+
+## 2. Data Integration & Ingestion
+
+### 2.1 Shopify Integration (Full)
+
+* **Purpose:** Ingest products, orders, customers, inventory, themes, discounts, draft orders, webhooks (orders, products), and store settings.
+* **What to request:** OAuth scopes covering read_products, read_orders, read_customers, read_inventory, read_themes, read_script_tags, read_content, read_price_rules, write_webhooks (for subscription management), read_apps.
+* **Processing:** Incremental sync via webhooks + periodic full snapshots.
+* **Outputs:** Normalized canonical store model in data warehouse.
+* **Acceptance:** Near-real-time order/stock updates (webhook latency <10s typical), complete snapshot within initial sync window.
+
+### 2.2 Ad Platforms: Meta Ads & Google Ads (Production-Ready)
+
+* **Purpose:** Pull campaign, ad, creative, audience, spending, and conversion metrics.
+* **What to request:** OAuth scopes for read-only or read/write as required; ability to map conversions to Shopify orders via conversion APIs and offline conversions.
+* **Processing:** Daily incremental pulls, real-time webhook integration where available.
+* **Outputs:** Unified ad events feeds, campaign metadata.
+* **Acceptance:** 24-hour data freshness for historical trends; near-real-time for critical alerts when conversion webhooks are integrated.
+
+### 2.3 Analytics Integrations (Optional): GA4, Google Search Console, Klaviyo
+
+* **Purpose:** Add session-level context, organic search queries, email campaign performance.
+* **Inputs:** GA4 API, GSC, Klaviyo metrics.
+* **Outputs:** Enriched session data, channel attribution.
+
+### 2.4 External Trend Feeds
+
+* **Purpose:** Ingest social signals: hashtag velocity, keyword trends, content-type trend data, and public product/category chatter.
+* **Sources:** Public APIs, social listening providers, or lightweight third-party trend APIs (no scraping of private data).
+* **Outputs:** Trend stream with normalized topics, velocity, sentiment.
+
+### 2.5 Storage & Canonical Data Model
+
+* **Purpose:** Store both raw source payloads and normalized models.
+* **Storage:** S3 (raw), RDS/Postgres (normalized transactional), and columnar store (Redshift / Snowflake / BigQuery) for analytics.
+* **Acceptance:** Queryable canonical model for any store with documented schema.
+
+---
+
+## 3. Analytics & Insight Engines
+
+### 3.1 Real-Time Analytics Engine
+
+* **Purpose:** Provide live dashboards and alerting.
+* **Implementation:** Stream ingestion via Kafka/Kinesis -> materialized views in ClickHouse/Redshift Spectrum or timeseries DB for low-latency queries.
+* **Metrics:** Revenue, orders/minute, conversion rates by source, pageview to checkout conversion.
+
+### 3.2 Time-Series & Anomaly Detection
+
+* **Purpose:** Detect anomalies in revenue, traffic, or ad performance (spikes/drops).
+* **Technique:** Seasonal decomposition + Prophet / ARIMA / LSTM ensembles + online detection algorithms (CUSUM, ESD)
+* **Outputs:** Anomaly alerts with probable causes and confidence levels.
+
+### 3.3 Cohort, RFM & LTV Models
+
+* **Purpose:** Segment customers for lifecycle actions and value forecasting.
+* **Technique:** RFM scoring, probabilistic LTV (BG/NBD + Gamma-Gamma), cohort retention curves.
+* **Outputs:** LTV projections, best-customer lists, churn risk lists.
+
+### 3.4 Product & Catalog Analytics
+
+* **Purpose:** SKU-level performance, cannibalization detection, bundle suggestions.
+* **Technique:** Uplift modeling, uplift attribution to promotions, conversion funnel for PDP.
+* **Outputs:** Product scorecards, suggestions for bundling, price tests.
+
+### 3.5 Trend Mapping & Relevance Scoring
+
+* **Purpose:** Map external trends to product catalog and surface opportunities.
+* **Technique:** Semantic matching via embeddings, keyword overlap, taxonomy mapping, and scoring (relevance, speed, business fit).
+* **Outputs:** Ranked opportunities with suggested actions.
+
+### 3.6 Marketing Performance Attribution & Correlation
+
+* **Purpose:** Correlate ad spend, creatives, placements with on-site conversions and revenue.
+* **Technique:** Multi-touch heuristics + probabilistic attribution + experimental design when data available.
+* **Outputs:** Channel/creative-level ROAS, wasteful spend detection.
+
+---
+
+## 4. AI & Recommendation System
+
+### 4.1 Retrieval-Augmented Generation (RAG) Core
+
+* **Purpose:** Provide conversational, context-aware answers using store + ad + trend data.
+* **Components:**
+
+  * Vector store (**Quadrant DB**) with embeddings for: product descriptions, FAQs, historical reports, external trend summaries. Quadrant DB will act as the primary vector database for semantic retrieval, trend–product matching, conversational memory, and recommendation grounding.
+  * Retriever that finds top-k context documents by relevance.
+  * LLM prompt-engineering and post-processing layers to generate actionable responses.
+* **Operational Constraints:** Ensure prompt length remains bounded; provide provenance links for claims.
+
+### 4.2 Recommendation Scoring & Explainability
+
+* **Purpose:** Every recommendation includes: confidence, expected impact, data sources, and steps to implement.
+* **Technique:** Decision rules, ML scoring models (XGBoost / LightGBM ensembles), and causal inference where possible.
+* **Outputs:** Categorized recommendations (High/Medium/Low impact) with data-backed rationale.
+
+### 4.3 Action Templates & Automated Asset Generation
+
+* **Purpose:** Generate ad copy, product description rewrites, email subject lines, creative briefs and A/B test variants.
+* **Constraints:** Provide human-in-the-loop controls and editing before publishing.
+
+### 4.4 Scenario Simulation Engine
+
+* **Purpose:** Run quick “what-if” scenarios (increase spend by 10% on X, run 20% discount) and estimate outcomes.
+* **Technique:** Short-run uplift models fed with historical elasticity and seasonality adjustments.
+
+### 4.5 Persistent Memory & Conversation Context
+
+* **Purpose:** Maintain store-specific memory for context across sessions (previous Q&As, accepted recommendations).
+* **Controls:** Administrators can clear or export memory. Memory retention policy configurable.
+
+---
+
+## 5. Conversational UI & Experience
+
+> Voice intelligence in Plaur is powered by **Sarvam API**, enabling high-quality, low-latency text-to-speech with support for Indian English and future regional language expansion.
+
+### 5.1 Chat Interface (Web + Mobile Responsive)
+
+* **Purpose:** Natural language interface that supports multi-turn conversations, charts, tables, and downloadable assets.
+* **Features:** Rich responses (cards, charts), follow-ups, clarifying questions, action buttons (e.g., "Create PDF", "Email report").
+
+### 5.2 Guided Workflows & Playbooks
+
+* **Purpose:** Walk merchants through common workflows: "Weekly check", "Reduce cart abandonment", "Holiday campaign".
+* **Mechanics:** Step-by-step UI flows with checkpoints and progress.
+
+### 5.3 Explainability View
+
+* **Purpose:** For every insight/recommendation, show data provenance, confidence, and alternative hypotheses.
+
+### 5.4 Conversation History & Saved Queries
+
+* **Purpose:** Save frequently asked queries and custom reports; enable team-wide saved insights.
+
+---
+
+## 6. Reporting & Exports
+
+### 6.1 Weekly PDF Reports (Auto)
+
+* **Content:** Executive summary, top KPIs, trend highlights, marketing summary, prioritized next steps, appendix with raw tables.
+* **Delivery:** Auto-email; downloadable from portal.
+
+### 6.2 On-demand Reports & Exports
+
+* **Formats:** CSV, XLSX, PDF
+* **Use:** Financial reconciliation, agency reporting, investor decks.
+
+### 6.3 Dashboard Widgets & Embeddable Views
+
+* **Purpose:** Allow merchants and agencies to embed KPI widgets in internal dashboards or clients’ dashboards.
+
+---
+
+## 7. Alerts & Automation
+
+> Alerts and summaries can optionally be delivered as **voice briefings generated via Sarvam API**, in addition to text-based notifications.
+
+---
+
+## 8. Billing, Subscriptions & Monetization (Shopify Native)
+
+Plaur uses **Shopify’s official App Billing API (GraphQL)** for all payments and subscriptions. No external payment gateway (Razorpay, Stripe, etc.) is used or required. This ensures full compliance with Shopify App Store policies and builds trust with merchants by charging directly on their Shopify invoice.
+
+### 8.1 Billing Principles
+
+* All charges are processed by Shopify
+* Merchants approve charges inside Shopify
+* Taxes (GST/VAT), invoicing, and collections are handled by Shopify
+* Plaur receives payouts after Shopify commission
+* No card data is ever handled by Plaur
+
+### 8.2 Subscription Plans (3-Tier Model)
+
+Plaur offers **three subscription plans**, implemented as Shopify **Recurring App Subscriptions**.
+
+#### 1️⃣ Starter Plan
+
+* Target: Small / early-stage Shopify stores
+* Billing: Monthly recurring
+* Features:
+
+  * Store health analysis (basic)
+  * Limited product & sales insights
+  * Limited AI chat queries per month
+  * Basic trend analysis (store-level)
+  * Weekly reports
+* Trial: 14 days
+
+#### 2️⃣ Growth Plan
+
+* Target: Scaling D2C brands
+* Billing: Monthly recurring
+* Features:
+
+  * Full store analysis (products, collections, pages)
+  * Advanced trend analysis (market + category)
+  * Social media trend insights
+  * Marketing & funnel analysis
+  * Meta Ads & Google Ads integration
+  * Higher AI chat & report limits
+  * Daily insights + weekly deep reports
+* Trial: 14 days
+
+#### 3️⃣ Pro Plan
+
+* Target: Large brands & performance-driven stores
+* Billing: Monthly recurring
+* Features:
+
+  * Everything in Growth
+  * Real-time anomaly detection
+  * Advanced competitor benchmarking
+  * Predictive sales & demand forecasting
+  * Unlimited AI chat (fair-use policy)
+  * Usage-based AI overage support
+  * Priority processing & insights
+  * Voice summaries powered by Sarvam API
+* Trial: Optional / custom
+
+### 8.3 Usage-Based Billing (Add-on)
+
+For high-volume AI usage, Plaur uses **Shopify Usage-Based Charges**:
+
+* Applied only on Growth & Pro plans
+* Monthly capped amount
+* Used for:
+
+  * Extra AI chat queries
+  * Large-scale report generation
+  * Heavy data re-analysis
+
+Usage charges are transparently added to the merchant’s Shopify bill at the end of the billing cycle.
+
+### 8.4 Billing Flow
+
+1. Merchant installs Plaur
+2. Plaur checks active subscription status
+3. If no active plan → redirect to Shopify billing approval
+4. Merchant approves plan inside Shopify
+5. Shopify activates subscription
+6. Plaur unlocks features based on plan
+
+### 8.5 Subscription Enforcement
+
+* Subscription status is verified on every authenticated request
+* Feature access is controlled via a billing-aware feature gate
+* On cancellation or uninstall:
+
+  * Access is immediately revoked
+  * Data is soft-deleted as per retention policy
+
+### 8.6 Webhooks Used
+
+* APP_SUBSCRIPTIONS_UPDATE
+* APP_SUBSCRIPTIONS_CANCELLED
+* APP_UNINSTALLED
+* SHOP_UPDATE
+
+---
+
+> Alerts and summaries can optionally be delivered as **voice briefings generated via Sarvam API**, in addition to text-based notifications.
+
+### 7.1 Alerting System
+
+* **Types:** Push in-app, email, SMS (via Twilio), Slack integration.
+* **Triggers:** Anomalies, inventory thresholds, campaign dips, payments/chargeback events.
+
+### 7.2 Playbook Automation (Human-in-loop)
+
+* **Purpose:** Suggest sequence of actions with pre-built automations (e.g., generate a new ad variant, schedule an email). All automations require explicit merchant approval before executing.
+
+---
+
+## 8. Advanced Features & Enterprise Add-ons
+
+### 8.1 Forecasting & Planning Suite
+
+* Sales forecasting (SKU-level), capacity planning, promo optimization calendar.
+
+### 8.2 Competitor Benchmarking Module (Enterprise)
+
+* Uses public data to measure category benchmarks; careful privacy-preserving design.
+
+### 8.3 Agency & Multi-Store Management
+
+* Central account for agencies, cross-store insights, report bundling.
+
+### 8.4 Marketplace of Automation & Integrations
+
+* Marketplace to add connectors (Klaviyo, Postscript, Loyalty apps), pre-built playbooks.
+
+---
+
+# Technical Architecture (High Level)
+
+## Principles
+
+* Serverless-first where it reduces ops
+* Componentized microservices for analytics, ingestion, AI, and UI
+* Observable and testable
+
+## Major Components
+
+1. **Ingestion Layer** — Webhooks, Pollers, ETL Workers
+
+   * Shopify Webhooks & GraphQL Admin API
+   * Ads pollers (Meta/Google) with backoff and idempotency
+   * Trend ingestion worker
+2. **Raw Storage** — Object store (S3) with partitioning per tenant
+3. **Processing & ETL** — Airflow / Prefect pipelines + serverless functions
+4. **Normalized Data Store** — Postgres (transactions) + columnar DB (Redshift/BigQuery)
+5. **Streaming & Real-time** — Kafka/Kinesis + materialized views (ClickHouse)
+6. **Feature Store & Embeddings** — Vector DB (Pinecone / Milvus) + cached embeddings in Redis
+7. **AI/LLM Layer** — LLM orchestrator service, prompt templates, retriever, RAG composer
+8. **API Gateway & Backend** — REST/GraphQL APIs, auth middleware
+9. **Web UI** — React + Tailwind + component library; WebSocket for live updates
+10. **Automation & Scheduler** — Celery / Step Functions
+11. **Monitoring** — Prometheus, Grafana, Sentry, CloudWatch
+
+### Data Flow Summary
+
+* Data sources → ingestion → raw S3 → ETL → normalized DB / columnar store → analytics services
+* Textual content & context → embedding pipeline → vector store → retriever → LLM
+* UI query → API gateway → retriever + LLM → response with provenance
+
+---
+
+# AI/ML Stack & Design
+
+## Model Choices & Hosting
+
+> Plaur uses **Quadrant DB** for all vector search and semantic retrieval workloads, and **Sarvam API** for all voice synthesis and spoken summaries.
+
+* **Embeddings:** Use high-quality open embeddings or cloud provider embeddings (OpenAI embeddings, if acceptable) for semantic mapping.
+* **Vector DB:** **Quadrant DB** as the primary production vector database. The system will still maintain an abstraction layer to allow future portability, but Quadrant DB will be the default and optimized implementation.
+* **LLMs:** Primary inference via managed LLM endpoints (OpenAI, Anthropic, or private LLMs hosted on VMs) depending on cost, latency, and data-sensitivity choices.
+* **Fine-tuning vs Prompting:** Prefer RAG + prompt-engineering with minimal fine-tuning to reduce maintenance. Fine-tune only product-critical models (e.g., internal classifiers).
+
+## Retrieval & Prompting
+
+* **Retriever:** Hybrid BM25 + dense retriever; top-K context window with document filtering.
+* **Prompt templates:** Domain-specific prompts for analytics, marketing, and trend reasoning, including system instructions that force provenance and stepwise reasoning.
+
+## Explainability & Safety
+
+* **Provenance:** Each claim is tagged to source documents with links to the data snapshot and query filters.
+* **Hallucination mitigation:** Use conservative response templates, confidence thresholds, and include "I may be wrong" fallback behavior when confidence low.
+
+---
+
+# Security, Privacy & Compliance
+
+## Data Handling
+
+* **Encryption:** TLS in transit, AES-256 at rest.
+* **Isolation:** Tenant scoping via separate DB schemas or row-level security; encryption keys per tenant.
+* **Retention:** Default retention 2 years for analytics; configurable.
+
+## Compliance
+
+* **GDPR:** Data subject access and deletion processes; data export
+* **PCI:** Do not store credit card data; rely on Shopify’s PCI environment
+* **SOC2 readiness:** Logging, incident response, documented processes
+
+## Access & Secrets
+
+* **Secret management:** AWS Secrets Manager / HashiCorp Vault
+* **Least privilege:** OAuth scopes for each integration; support granular revocation
+
+---
+
+# Infrastructure, Scalability & Reliability
+
+## Cloud Platform & Services
+
+* Primary: AWS (S3, Lambda, ECS/EKS, RDS, OpenSearch, Kinesis, EKS)
+* Optional analytics: BigQuery or Redshift for large customers
+
+## Autoscaling & Multi-region
+
+* Multi-az deployment for production; multi-region read replicas to serve low-latency queries in target geographies.
+
+## Backup & DR
+
+* Automated backups for RDS, S3 replication, DR runbooks, warm standby for critical components.
+
+## Observability
+
+* Metrics: Prometheus + Grafana; Traces: Jaeger; Errors: Sentry; Logs: CloudWatch + ELK
+
+---
+
+# Reliability Targets & SLAs
+
+* **Data Ingestion Freshness:** Standard tier — <4 hours; Premium — near-real-time (via webhooks)
+* **Chat Latency (response):** Goal <2s for retrieval + <4s for LLM call (depends on LLM provider)
+* **Uptime:** 99.95% for core APIs
+
+---
+
+# Operational Runbook & Maintenance
+
+* On-call rotations, incident severity matrix, alert thresholds
+* Regular model refresh schedule for embeddings and retriever indices
+* Quarterly security audits and penetration tests
+
+---
+
+# Roadmap & Release Plan (Production Launch + Growth)
+
+> The product is large — below is a recommended phased release plan for productionizing while minimizing risk. Each phase contains deliverables and acceptance criteria.
+
+### Phase A — Production Launch
+
+* Full Shopify integration, basic ad integrations, core analytics and dashboards, conversational RAG with store context, weekly PDF reports, alerts, secure onboarding
+* Acceptance: 50 pilot stores onboarded and successfully receiving weekly reports and chat insights
+
+### Phase B — Scale & Advanced AI
+
+* Real-time anomaly detection
+* Advanced trend mapping
+* Ad reconciliation
+* Action templates
+* **Voice summaries powered by Sarvam API (Indian-accent friendly, multilingual)**
+* Feature store optimization
+
+### Phase C — Enterprise & Automation
+
+* Agency portal, multi-store, competitor benchmarking, paid connectors, advanced forecasting, optional execution APIs (ad creatives, price updates) under strict controls
+
+### Phase D — Ecosystem
+
+* Marketplace, open playbooks, community models, third-party integrations
+
+---
+
+# Team Structure & Roles
+
+**Leadership:** CEO/Founder, Head of Product, Head of Engineering
+**Core Teams:**
+
+* Product (PM, PO, UX) — 3
+* Frontend — 3
+* Backend — 4
+* Data Engineering — 3
+* ML/AI Engineers — 3
+* DevOps/SRE — 2
+* QA — 2
+* Growth & GTM — 2
+* Customer Success & Onboarding — 2
+
+**Total (initial for production):** ~24 engineers & staff
+
+---
+
+# Quality Assurance & Testing
+
+* Unit & integration testing coverage (>80%)
+* End-to-end testing with synthetic stores
+* Load testing for ingestion & chat concurrency
+* Security testing: SAST, DAST, penetration testing
+
+---
+
+# Monitoring & KPIs
+
+* Merchant adoption & churn
+* LTV and revenue uplift per merchant
+* Average time to insight
+* Chat engagement metrics
+* Average recommendation acceptance rate
+* System metrics: request latency, error rate, queue depth
+
+---
+
+# Pricing & Packaging (Strategic Recommendations)
+
+* **Starter:** Basic analytics, weekly PDF, and limited chat (SMB)
+* **Growth:** Full analytics, ad integrations, unlimited chat, trend mapping
+* **Pro:** Forecasting, voice summary, premium support
+* **Enterprise:** Agency modules, SSO, custom integrations, SLAs
+* Include usage-based billing for high API usage or ad connectors
+
+---
+
+# Go-to-Market & Sales Motions
+
+* Partnerships with Shopify agencies
+* Beta pilot program with select merchants
+* Content & thought leadership on trend-led commerce
+* Freemium trial converted via success metrics (revenue lifted, conversion increases)
+
+---
+
+# Legal & Privacy Notes
+
+* Clear TOS for data access & usage
+* Privacy disclosures for trend data
+* Option for self-hosted vector DB for sensitive customers
+
+---
+
+# Appendix
+
+## A. Example Chat Prompts (Templates)
+
+* "Why did my sales drop by X% on DATE?" → Response should show traffic, ads, checkout issues, and top probable cause with evidence.
+* "Which 3 products should I promote this week and why?" → Response: Ranked list + expected impact + creative suggestions.
+
+## B. Weekly PDF Template (Headers)
+
+* Executive summary
+* Key metrics this week vs last week
+* Marketing performance (channel & campaign highlights)
+* Trend watch
+* Top 3 recommended actions
+* Appendix: raw numbers & data links
+
+## C. Shopify API Scopes (Suggested)
+
+* read_products, read_content, read_customers, read_orders, read_inventory, read_themes, read_price_rules, read_discounts, read_script_tags, write_webhooks
+
+## D. Integration Security Checklist
+
+* Least-privilege tokens
+* Token rotation
+* Role-based admin controls on enabling/disabling connectors
+
+---
+
+# Next Steps & Immediate Deliverables
+
+* Confirm product priorities and licensing model
+* Finalize vendor decisions for vector DB & model provider
+* Recruit core engineering leads (backend, data, ML)
+* Prepare pilot onboarding plan and pilot merchant list
+
+---
+
+*This project note synthesizes your product vision and the Plaur PDF outline into a production-grade plan ready for engineering, GTM, and investor conversations.*

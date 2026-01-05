@@ -1,0 +1,12 @@
+[package]
+name = "auth-service"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+plaur-common = { path = "../../crates/plaur-common" }
+plaur-auth = { path = "../../crates/plaur-auth" }
+lambda_runtime = { workspace = true }
+lambda_web = { workspace = true }
+tokio = { workspace = true }
+serde_json = { workspace = true }

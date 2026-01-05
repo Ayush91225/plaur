@@ -1,0 +1,42 @@
+server:
+  host: "127.0.0.1"
+  port: 8080
+  workers: 2
+
+database:
+  url: "postgresql://plaur:plaur@localhost:5432/plaur"
+  max_connections: 10
+  min_connections: 2
+
+redis:
+  url: "redis://localhost:6379"
+  pool_size: 5
+
+aws:
+  region: "us-east-1"
+  s3_bucket: "plaur-dev-data"
+  lambda_role_arn: "arn:aws:iam::123456789012:role/plaur-dev-lambda-role"
+
+shopify:
+  app_id: "dev-app-id"
+  app_secret: "dev-app-secret"
+  webhook_secret: "dev-webhook-secret"
+  scopes:
+    - "read_products"
+    - "read_orders"
+    - "read_customers"
+
+ai:
+  openai_api_key: "dev-openai-key"
+  quadrant_url: "http://localhost:6333"
+  quadrant_api_key: "dev-quadrant-key"
+  sarvam_api_key: "dev-sarvam-key"
+
+billing:
+  shopify_billing_api_version: "2023-10"
+  trial_days: 30
+
+security:
+  jwt_secret: "dev-jwt-secret-key-change-in-production"
+  encryption_key: "dev-encryption-key-change-in-production"
+  session_timeout: 86400

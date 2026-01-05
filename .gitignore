@@ -1,0 +1,73 @@
+# Rust
+/target/
+**/*.rs.bk
+Cargo.lock
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Configuration
+config/local.yaml
+config/secrets.yaml
+
+# Logs
+*.log
+logs/
+
+# Database
+*.db
+*.sqlite
+
+# Deployment
+deployment/
+bootstrap
+*.zip
+
+# Docker
+.dockerignore
+
+# Temporary files
+tmp/
+temp/
+
+# Coverage
+coverage/
+*.profraw
+
+# Documentation
+/docs/book/
+
+# Node modules (if any)
+node_modules/
+
+# Python (if any)
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+
+# Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+
+# Kubernetes
+*.kubeconfig

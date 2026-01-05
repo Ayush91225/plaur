@@ -1,0 +1,21 @@
+[package]
+name = "plaur-llm"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+plaur-common = { path = "../plaur-common" }
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+uuid = { workspace = true }
+chrono = { workspace = true }
+anyhow = { workspace = true }
+reqwest = { workspace = true }
+tracing = { workspace = true }
+base64 = "0.21"
+candle-core = "0.3"
+candle-nn = "0.3"
+candle-transformers = "0.3"
+hf-hub = "0.3"
+tokenizers = "0.15"

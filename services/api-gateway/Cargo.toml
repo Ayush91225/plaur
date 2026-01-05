@@ -1,0 +1,9 @@
+[package]
+name = "api-gateway"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+plaur-common = { path = "../../crates/plaur-common" }
+plaur-api = { path = "../../crates/plaur-api" }
+tokio = { workspace = true }

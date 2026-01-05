@@ -1,0 +1,9 @@
+[package]
+name = "plaur-core"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+plaur-common = { path = "../plaur-common" }
+tokio = { workspace = true }
+serde = { workspace = true }
